@@ -1,0 +1,31 @@
+properties([parameters([gitParameter(branch: '', branchFilter: 'origin/(.*)', defaultValue: 'origin/*', name: 'BRANCH', quickFilterEnabled: false, selectedValue: 'NONE', sortMode: 'NONE', tagFilter: '*', type: 'PT_BRANCH')])])
+pipeline {
+     agent any
+        options {
+  buildDiscarder logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '10')
+}
+   stages{
+   stage('scm'){
+     steps{
+        echo "Pulling changes from the branch ${params.BRANCH}"
+        git url: 'git@bitbucket.org:moresand/travel-labs.git',credentialsId: 'common-key', branch: "${params.BRANCH}"
+     }
+   }
+stage('deploy'){
+   steps {
+ sshagent(credentials : ["mos uat"]) {
+                     sh """ssh -o StrictHostKeyChecking=no sanjaya@192.168.26.5 << EOF
+                     sudo -i
+                     cd /usr/local/src/travel-labs/
+           docker system prune -a -f
+                     git pull origin ${params.BRANCH}
+                     make ENV=UAT rebuild
+                     exit
+                     exit
+                     exit
+            EOF"""
+                }
+        }
+      }
+      }
+}
